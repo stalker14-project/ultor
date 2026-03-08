@@ -27,4 +27,18 @@ impl SS14DatabaseService {
         let user_id: String = row.get(0);
         Ok(Some(user_id))
     }
+
+    pub async fn delete_pref(&self, user_id: Uuid) -> Result<(), crate::error::Error> {
+        let mut tx = self.inner.begin().await?;
+        let affected = sqlx::query(
+            "DELETE FROM preference WHERE user_id = $1"
+        )
+        .bind(user_id)
+        .execute(&mut *tx)
+        .await?
+        .rows_affected();
+
+        log::debug!("Deleted {affected} for {user_id}");
+        Ok(())
+    }
 }

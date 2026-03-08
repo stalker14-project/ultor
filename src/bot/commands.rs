@@ -3,12 +3,14 @@ pub mod link;
 pub mod ping;
 pub mod summon;
 pub mod user_id;
+pub mod preferences;
 
 pub use femboy::FemboyCommand;
 pub use link::LinkCommand;
 pub use ping::PingCommand;
 pub use summon::SummonCommand;
 pub use user_id::UserIdCommand;
+pub use preferences::PreferencesCommand;
 
 use serenity::all::{
     Color, CreateCommand, CreateEmbed, CreateEmbedFooter, CreateInteractionResponse,
