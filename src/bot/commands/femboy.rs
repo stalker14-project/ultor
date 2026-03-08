@@ -1,5 +1,5 @@
 use super::*;
-use rand::Rng;
+use rand::RngExt;
 use serenity::async_trait;
 
 #[derive(Debug)]

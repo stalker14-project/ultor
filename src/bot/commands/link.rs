@@ -13,7 +13,7 @@ use crate::{
     extract_discord_arg,
     services::{SS14AuthClientService, SS14DatabaseService, ServicesContainer},
     try_discord_unwrap,
-    utils::{format_extra_data, gen_random_color, gen_random_uuid, RED_COLOR},
+    utils::{format_extra_data, gen_random_color, RED_COLOR},
 };
 
 use super::{DiscordCommandDefinition, DiscordCommandHandler, DiscordCommandResponse};
@@ -191,7 +191,7 @@ impl DiscordCommandHandler for LinkCommand {
                             true,
                         ),
                         Err(e) => {
-                            let err_id = gen_random_uuid();
+                            let err_id = uuid::Uuid::new_v4();
                             error!("{}. Failed to delete record. Error: {}", err_id, e);
                             DiscordCommandResponse::followup_response(
                                 &format!(
@@ -265,7 +265,7 @@ impl DiscordCommandHandler for LinkCommand {
                             true,
                         ),
                         Err(e) => {
-                            let err_id = gen_random_uuid();
+                            let err_id = uuid::Uuid::new_v4();
                             error!("{}. Failed to delete record. Error: {}", err_id, e);
                             DiscordCommandResponse::followup_response(
                                 &format!(

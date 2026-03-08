@@ -1,14 +1,9 @@
-use rand::Rng;
+use rand::RngExt;
 use serenity::all::Color;
-use uuid::Uuid;
 
 use crate::services::SS14AuthClientService;
 
 pub const RED_COLOR: Color = Color::from_rgb(255, 0, 0);
-
-pub fn gen_random_uuid() -> Uuid {
-    Uuid::from_u128(rand::rng().random::<u128>())
-}
 
 pub fn gen_random_color() -> Color {
     let mut rng = rand::rng();
@@ -35,7 +30,7 @@ macro_rules! try_discord_unwrap {
         match $res {
             Ok(v) => v,
             Err(e) => {
-                let err_id = $crate::utils::gen_random_uuid();
+                let err_id = uuid::Uuid::new_v4();
                 log::error!("{}. {}. Error: {}", err_id, $log_msg, e);
                 return $crate::bot::commands::DiscordCommandResponse::followup_embed_response(
                     $err_msg,
@@ -58,7 +53,7 @@ macro_rules! try_discord_unwrap {
                 try_discord_unwrap!(@ephemeral $($ephemeral)?),
             ),
             Err(e) => {
-                let err_id = $crate::utils::gen_random_uuid();
+                let err_id = uuid::Uuid::new_v4();
                 log::error!("{}. {}. Error: {}", err_id, $log_msg, e);
                 return $crate::bot::commands::DiscordCommandResponse::followup_embed_response(
                     $err_msg,
