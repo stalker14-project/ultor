@@ -29,7 +29,4 @@ WORKDIR /app
 COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/ultor ./ultor
 COPY --from=builder /app/migrations ./migrations
 
-RUN useradd -m appuser
-USER appuser
-
 CMD ["./ultor"]
