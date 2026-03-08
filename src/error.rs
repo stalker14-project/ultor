@@ -9,7 +9,7 @@ pub enum Error {
     #[error("Discord bot error: {0}")]
     BotError(String),
     #[error("Discord API error: {0}")]
-    SerenityError(#[from] serenity::Error),
+    SerenityError(Box<serenity::Error>),
     #[error("Type mismatch error: {0}")]
     ParseIntError(#[from] std::num::ParseIntError),
     #[error("Database error: {0}")]
@@ -22,6 +22,12 @@ pub enum Error {
     InvalidUuidError(#[from] uuid::Error),
     #[error("TypeAuthD Error: {0}")]
     TypeAuthdError(String),
+}
+
+impl From<serenity::Error> for Error {
+    fn from(value: serenity::Error) -> Self {
+        Error::SerenityError(Box::new(value))
+    }
 }
 
 impl Error {
