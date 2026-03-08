@@ -2,6 +2,8 @@ FROM rust:1 AS builder
 
 WORKDIR /app
 
+RUN mkdir -p migrations
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     musl-tools pkg-config libssl-dev \
  && rm -rf /var/lib/apt/lists/*
