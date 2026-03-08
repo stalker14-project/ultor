@@ -12,6 +12,6 @@ serenity = "0.12"
 env_logger = "0.11.6"
 log = "0.4.24"
 sqlx = { version = "0.8.3", features = ["sqlite", "runtime-tokio", "postgres", "uuid"]}
-uuid = "1.16.0"
+uuid = { version = "1.22.0", features = ["v4"] } 
 reqwest = { version =  "0.12.15", features = ["json"] }
 rand = "0.9.0"
