@@ -3,6 +3,12 @@
     "token": "TOKEN_HERE",
     "guilds": [
       "1126278315364339712"
+    ],
+    "sponsor_roles": [
+      {
+        "name": "Sponsor",
+        "id": "ROLE_ID_HERE"
+      }
     ]
   },
   "database": {

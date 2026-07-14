@@ -1,7 +1,8 @@
 pub mod commands;
+pub mod sponsor;
 
 use crate::bot::commands::{DiscordCommandHandler, DiscordCommandResponse};
-use crate::services::ServicesContainer;
+use crate::services::{BotDatabaseService, ServicesContainer};
 use crate::{config_get, config_get_array, error::Error};
 use log::{debug, error, info};
 use serenity::all::{
@@ -11,6 +12,7 @@ use serenity::all::{
 use serenity::async_trait;
 use serenity::prelude::*;
 use std::collections::BTreeMap;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 pub struct DiscordApp {
@@ -20,6 +22,9 @@ pub struct DiscordApp {
 
     handlers_map: BTreeMap<String, Arc<dyn DiscordCommandHandler + Send + Sync>>,
     handlers: Vec<Arc<dyn DiscordCommandHandler + Send + Sync>>,
+
+    db: Arc<BotDatabaseService>,
+    sponsor_task_started: AtomicBool,
 }
 
 #[async_trait]
@@ -58,6 +63,20 @@ impl EventHandler for DiscordApp {
 
         debug!("Registered {} global commands", commands.unwrap().len());
         info!("Finished commands registering. Listening for incoming interactions...");
+
+        // `ready` can fire more than once (e.g. on reconnect); only spawn the
+        // sponsor watcher on the first invocation.
+        if self
+            .sponsor_task_started
+            .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+            .is_ok()
+        {
+            tokio::spawn(sponsor::run_sponsor_loop(
+                ctx.clone(),
+                Arc::clone(&self.db),
+                self.guilds.clone(),
+            ));
+        }
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
@@ -171,7 +190,7 @@ impl EventHandler for DiscordApp {
 impl DiscordApp {
     pub fn new(
         command_defs: Vec<Arc<dyn DiscordCommandHandler + Send + Sync>>,
-        _services: &ServicesContainer,
+        services: &ServicesContainer,
     ) -> Result<Self, crate::error::Error> {
         let guilds: Vec<&str> = config_get_array!("discord.guilds", as_array, as_str).unwrap();
 
@@ -181,6 +200,8 @@ impl DiscordApp {
             guilds: Vec::with_capacity(guilds.len()),
             handlers: vec![],
             handlers_map: BTreeMap::new(),
+            db: services.get_unsafe(),
+            sponsor_task_started: AtomicBool::new(false),
         };
 
         app.construct_commands(command_defs)?;

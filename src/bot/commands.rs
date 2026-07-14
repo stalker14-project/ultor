@@ -1,6 +1,7 @@
 pub mod femboy;
 pub mod link;
 pub mod ping;
+pub mod sponsor;
 pub mod summon;
 pub mod user_id;
 pub mod preferences;
@@ -8,6 +9,7 @@ pub mod preferences;
 pub use femboy::FemboyCommand;
 pub use link::LinkCommand;
 pub use ping::PingCommand;
+pub use sponsor::SponsorCommand;
 pub use summon::SummonCommand;
 pub use user_id::UserIdCommand;
 pub use preferences::PreferencesCommand;

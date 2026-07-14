@@ -10,6 +10,84 @@ pub fn gen_random_color() -> Color {
     Color::from_rgb(rng.random(), rng.random(), rng.random())
 }
 
+/// Reads the list of configured sponsor roles from `discord.sponsor_roles`.
+///
+/// Each entry is a `(name, role_id)` pair. Malformed entries are skipped.
+pub fn sponsor_roles() -> Vec<(String, u64)> {
+    let Some(config) = crate::CONFIG.get() else {
+        return Vec::new();
+    };
+
+    let Some(array) = config
+        .get_path("discord.sponsor_roles")
+        .and_then(|v| v.as_array())
+    else {
+        return Vec::new();
+    };
+
+    array
+        .iter()
+        .filter_map(|item| {
+            let obj = item.as_object()?;
+            let name = obj.get("name")?.as_str()?.to_string();
+            let id = obj.get("id")?.as_str()?.parse::<u64>().ok()?;
+            Some((name, id))
+        })
+        .collect()
+}
+
+/// Current unix timestamp in seconds.
+pub fn now_unix() -> i64 {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0)
+}
+
+/// Parses a human duration expression into a number of seconds.
+///
+/// Supported units: `s` (seconds), `m` (minutes), `h` (hours), `d` (days),
+/// `w` (weeks). Multiple segments may be combined, e.g. `1w3d12h`.
+/// Every numeric part must be followed by a unit, otherwise `None` is returned.
+pub fn parse_duration_secs(input: &str) -> Option<i64> {
+    let mut total: i64 = 0;
+    let mut num = String::new();
+    let mut seen = false;
+
+    for c in input.chars() {
+        if c.is_ascii_digit() {
+            num.push(c);
+            continue;
+        }
+
+        if num.is_empty() {
+            return None;
+        }
+
+        let value: i64 = num.parse().ok()?;
+        let unit = match c.to_ascii_lowercase() {
+            's' => 1,
+            'm' => 60,
+            'h' => 3600,
+            'd' => 86_400,
+            'w' => 604_800,
+            _ => return None,
+        };
+
+        total = total.checked_add(value.checked_mul(unit)?)?;
+        num.clear();
+        seen = true;
+    }
+
+    // A trailing number without a unit is invalid.
+    if !num.is_empty() || !seen {
+        return None;
+    }
+
+    Some(total)
+}
+
 #[macro_export]
 macro_rules! try_discord_unwrap {
     // Pattern: Option<T>
