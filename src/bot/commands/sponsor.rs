@@ -1,26 +1,44 @@
 use std::sync::Arc;
 
 use serenity::{
-    all::{CommandOptionType, CreateCommand, CreateCommandOption, ResolvedOption, ResolvedValue},
+    all::{
+        CommandOptionType, CreateCommand, CreateCommandOption, GuildId, ResolvedOption,
+        ResolvedValue, RoleId,
+    },
     async_trait,
+    http::Http,
 };
 
-use crate::extract_discord_arg;
 use crate::services::{BotDatabaseService, ServicesContainer};
-use crate::try_discord_unwrap;
 use crate::utils::{gen_random_color, now_unix, parse_duration_secs, sponsor_roles};
+use crate::{config_get, config_get_array, extract_discord_arg, try_discord_unwrap};
 
 use super::{DiscordCommandDefinition, DiscordCommandHandler, DiscordCommandResponse};
 
 #[derive(Debug)]
 pub struct SponsorCommand {
     db: Arc<BotDatabaseService>,
+    /// Standalone REST client so the role can be granted right away, without
+    /// waiting for the background watcher's next tick.
+    http: Arc<Http>,
+    guilds: Vec<GuildId>,
 }
 
 impl SponsorCommand {
     pub fn new(services: &ServicesContainer) -> Self {
+        let token = config_get!("discord.token", as_str).unwrap();
+
+        let guilds = config_get_array!("discord.guilds", as_array, as_str)
+            .unwrap_or_default()
+            .into_iter()
+            .filter_map(|s| s.parse::<u64>().ok())
+            .map(GuildId::new)
+            .collect();
+
         Self {
             db: services.get_unsafe(),
+            http: Arc::new(Http::new(token)),
+            guilds,
         }
     }
 }
@@ -91,11 +109,11 @@ impl DiscordCommandHandler for SponsorCommand {
         );
         // The value comes from a predefined choice, but guard against a
         // non-numeric one just in case.
-        try_discord_unwrap!(
+        let role = RoleId::new(try_discord_unwrap!(
             role_id.parse::<u64>().ok(),
             none => "The selected role is invalid.",
             ephemeral => true
-        );
+        ));
 
         let expires_at = match extract_discord_arg!(opts, "duration", String) {
             Some(raw) if !raw.trim().is_empty() => {
@@ -119,14 +137,35 @@ impl DiscordCommandHandler for SponsorCommand {
             ephemeral => true
         );
 
+        // Grant the role right away instead of waiting for the watcher. If the
+        // user isn't a member of a configured guild the call fails there; the
+        // watcher will pick it up once they join.
+        let mut granted = false;
+        for guild in &self.guilds {
+            match self
+                .http
+                .add_member_role(*guild, user.id, role, Some("Sponsorship granted"))
+                .await
+            {
+                Ok(_) => granted = true,
+                Err(e) => log::debug!("Couldn't grant sponsor role in {guild} immediately: {e}"),
+            }
+        }
+
+        let sync_note = if granted {
+            "The role has been assigned."
+        } else {
+            "The role will be assigned automatically once the user is on the server."
+        };
+
         let message = match expires_at {
             Some(ts) => format!(
-                "✅ Granted <@&{}> to <@{}>.\n⏳ Active until <t:{}:F> (<t:{}:R>).\nThe role is issued automatically within a few minutes.",
-                role_id, discord_id, ts, ts
+                "✅ Granted <@&{}> to <@{}>.\n⏳ Active until <t:{}:F> (<t:{}:R>).\n{}",
+                role_id, discord_id, ts, ts, sync_note
             ),
             None => format!(
-                "✅ Granted **permanent** <@&{}> to <@{}>.\nThe role is issued automatically within a few minutes.",
-                role_id, discord_id
+                "✅ Granted **permanent** <@&{}> to <@{}>.\n{}",
+                role_id, discord_id, sync_note
             ),
         };
 
