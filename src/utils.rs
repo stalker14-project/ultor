@@ -48,15 +48,38 @@ pub fn now_unix() -> i64 {
 /// Parses a human duration expression into a number of seconds.
 ///
 /// Supported units: `s` (seconds), `m` (minutes), `h` (hours), `d` (days),
-/// `w` (weeks). Multiple segments may be combined, e.g. `1w3d12h`.
+/// `w` (weeks), `mo` (months, 30 days), `y` (years, 365 days). Multiple
+/// segments may be combined, e.g. `1w3d12h`.
 /// Every numeric part must be followed by a unit, otherwise `None` is returned.
 pub fn parse_duration_secs(input: &str) -> Option<i64> {
+    fn segment_secs(num: &str, unit: &str) -> Option<i64> {
+        let value: i64 = num.parse().ok()?;
+        let unit_secs: i64 = match unit {
+            "s" => 1,
+            "m" => 60,
+            "h" => 60 * 60,
+            "d" => 24 * 60 * 60,
+            "w" => 7 * 24 * 60 * 60,
+            "mo" => 30 * 24 * 60 * 60,
+            "y" => 365 * 24 * 60 * 60,
+            _ => return None,
+        };
+
+        value.checked_mul(unit_secs)
+    }
+
     let mut total: i64 = 0;
     let mut num = String::new();
-    let mut seen = false;
+    let mut unit = String::new();
 
     for c in input.chars() {
         if c.is_ascii_digit() {
+            // A digit after a unit closes the previous segment.
+            if !unit.is_empty() {
+                total = total.checked_add(segment_secs(&num, &unit)?)?;
+                num.clear();
+                unit.clear();
+            }
             num.push(c);
             continue;
         }
@@ -65,27 +88,15 @@ pub fn parse_duration_secs(input: &str) -> Option<i64> {
             return None;
         }
 
-        let value: i64 = num.parse().ok()?;
-        let unit = match c.to_ascii_lowercase() {
-            's' => 1,
-            'm' => 60,
-            'h' => 3600,
-            'd' => 86_400,
-            'w' => 604_800,
-            _ => return None,
-        };
-
-        total = total.checked_add(value.checked_mul(unit)?)?;
-        num.clear();
-        seen = true;
+        unit.push(c.to_ascii_lowercase());
     }
 
-    // A trailing number without a unit is invalid.
-    if !num.is_empty() || !seen {
+    // Empty input, or a trailing number without a unit.
+    if unit.is_empty() {
         return None;
     }
 
-    Some(total)
+    total.checked_add(segment_secs(&num, &unit)?)
 }
 
 #[macro_export]

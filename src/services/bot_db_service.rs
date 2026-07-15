@@ -83,6 +83,27 @@ impl BotDatabaseService {
         Ok(sponsorships)
     }
 
+    /// Returns every sponsorship stored for a single user.
+    pub async fn get_user_sponsorships(&self, discord_id: &str) -> Result<Vec<Sponsorship>, Error> {
+        let rows = sqlx::query(
+            "SELECT discord_id, role_id, expires_at FROM sponsorships WHERE discord_id = ?1",
+        )
+        .bind(discord_id)
+        .fetch_all(&self.inner)
+        .await?;
+
+        let sponsorships = rows
+            .into_iter()
+            .map(|row| Sponsorship {
+                discord_id: row.get(0),
+                role_id: row.get(1),
+                expires_at: row.get(2),
+            })
+            .collect();
+
+        Ok(sponsorships)
+    }
+
     /// Removes the sponsorship record for the given user/role pair.
     pub async fn remove_sponsorship(&self, discord_id: &str, role_id: &str) -> Result<(), Error> {
         sqlx::query("DELETE FROM sponsorships WHERE discord_id = ?1 AND role_id = ?2")

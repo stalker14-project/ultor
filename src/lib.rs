@@ -46,5 +46,6 @@ pub fn command_definitions(
         Arc::new(LinkCommand::new(services)),
         Arc::new(PreferencesCommand::new(services)),
         Arc::new(SponsorCommand::new(services)),
+        Arc::new(RemoveSponsorCommand::new(services)),
     ]
 }

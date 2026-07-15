@@ -9,7 +9,7 @@ pub mod preferences;
 pub use femboy::FemboyCommand;
 pub use link::LinkCommand;
 pub use ping::PingCommand;
-pub use sponsor::SponsorCommand;
+pub use sponsor::{RemoveSponsorCommand, SponsorCommand};
 pub use summon::SummonCommand;
 pub use user_id::UserIdCommand;
 pub use preferences::PreferencesCommand;
