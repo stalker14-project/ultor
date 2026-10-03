@@ -10,7 +10,9 @@ pub use config::CONFIG;
 pub use error::Error;
 
 pub async fn initialize_services(container: &services::ServicesContainer) -> Result<(), Error> {
-    use services::{BotDatabaseService, SS14AuthClientService, SS14DatabaseService};
+    use services::{
+        BotDatabaseService, FactionRelationsService, SS14AuthClientService, SS14DatabaseService,
+    };
     let bot_db_path = config_get!("database.bot_database_path", as_str).unwrap();
 
     let db_service =
@@ -19,6 +21,7 @@ pub async fn initialize_services(container: &services::ServicesContainer) -> Res
 
     let ss14_db_uri = config_get!("database.ss14_database_url", as_str).unwrap();
     container.register(SS14DatabaseService::new(ss14_db_uri.to_string())?);
+    container.register(FactionRelationsService::new(container.get_unsafe()));
 
     let discord_auth_uri = config_get!("auth.discord_auth_uri", as_str).unwrap();
     let discord_auth_token = config_get!("auth.discord_auth_token", as_str).unwrap();
@@ -40,6 +43,7 @@ pub fn command_definitions(
 
     vec![
         Arc::new(PingCommand),
+        Arc::new(RelationsCommand::new(services)),
         Arc::new(FemboyCommand),
         Arc::new(UserIdCommand::new(services)),
         Arc::new(SummonCommand::new(services)),

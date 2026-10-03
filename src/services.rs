@@ -1,8 +1,10 @@
 mod auth_client_service;
+mod faction_relations_service;
 mod bot_db_service;
 mod ss14_database_service;
 
 pub use auth_client_service::*;
+pub use faction_relations_service::*;
 pub use bot_db_service::*;
 pub use ss14_database_service::*;
 

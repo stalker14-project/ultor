@@ -6,7 +6,34 @@ pub struct SS14DatabaseService {
     inner: PgPool,
 }
 
+#[derive(Debug)]
+pub struct FactionRelationOverride {
+    pub faction_a: String,
+    pub faction_b: String,
+    pub relation_type: i32,
+}
+
 impl SS14DatabaseService {
+    /// Saved overrides only; the game stores baseline relations in its prototypes.
+    pub async fn faction_relation_overrides(
+        &self,
+    ) -> Result<Vec<FactionRelationOverride>, crate::error::Error> {
+        let rows = sqlx::query(
+            "SELECT faction_a, faction_b, relation_type FROM stalker_faction_relations",
+        )
+        .fetch_all(&self.inner)
+        .await?;
+        rows.into_iter()
+            .map(|row| {
+                Ok(FactionRelationOverride {
+                    faction_a: row.try_get("faction_a")?,
+                    faction_b: row.try_get("faction_b")?,
+                    relation_type: row.try_get("relation_type")?,
+                })
+            })
+            .collect()
+    }
+
     pub fn new(pg_url: String) -> Result<Self, crate::error::Error> {
         let pg_pool = PgPool::connect_lazy(pg_url.as_str())?;
 

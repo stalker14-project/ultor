@@ -101,6 +101,7 @@ impl EventHandler for DiscordApp {
                     {
                         error!("Error sending followup command: {e}");
                     }
+                    return;
                 }
             }
 
@@ -116,6 +117,7 @@ impl EventHandler for DiscordApp {
                 {
                     error!("Error sending followup command: {e}");
                 }
+                return;
             }
 
             let handler = self.handlers_map.get(&cmd.data.name);
